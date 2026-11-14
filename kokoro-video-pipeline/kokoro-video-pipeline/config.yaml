@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# TTS engine - swap freely, the rest of the pipeline never changes.
+#   backend: kokoro   <- today: free, CPU-only, very good quality
+#   (future: chatterbox, f5, ... - see tts_backends/base.py for the 4 steps)
+# ---------------------------------------------------------------------------
+tts:
+  backend: kokoro
+  lang_code: "a"        # a = American English, b = British English
+  voice: af_heart       # voice list: huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
+  speed: 1.0
+
+video:
+  width: 1920           # YouTube 16:9. For Shorts/Reels use 1080 x 1920
+  height: 1080
+  fps: 30
+  preset: veryfast      # x264 speed/size tradeoff: ultrafast | veryfast | medium | slow
+  crf: 23               # quality: lower = better + bigger file (18-28 sensible)
+  burn_subtitles: false # true = bake narration.srt into the video
+
+# ---------------------------------------------------------------------------
+# TITLE CARDS: any line starting with ## in script.txt becomes an animated
+# text card instead of narration. The text is NOT spoken.
+#   ## The Hidden Ocean          -> text over a blurred background
+#   ## Life in Darkness [dark]   -> text over a plain black background
+#   ## Any Title [blur]          -> force the blur style for one card
+# Every card fades in and the text slides up automatically.
+# ---------------------------------------------------------------------------
+title_cards:
+  enabled: true
+  default_style: blur   # blur = blurred background | dark = plain black
+  duration: 3.0         # seconds each card stays on screen
+  font_size: 72         # size at 1080p (scales automatically with video size)
+  wrap_chars: 28        # long titles wrap after this many characters
+  font: auto            # path to a .ttf file, or auto (uses a system font)
+
+# ---------------------------------------------------------------------------
+# TEXT EFFECTS: any narration paragraph can carry animation tags at its end:
+#   Breaking news [scroll: 0, 3, 80]
+#   Some line [fade]              <- multiple tags chain: [fade][slide: left]
+# The tagged text is still spoken AND shown as an animated overlay while the
+# voice reads it. Effects are plugins - build your own in effects/:
+# guide with cheatsheet -> effects/README.md
+# ---------------------------------------------------------------------------
+text_fx:
+  enabled: true
+  font_size: 48         # at 1080p (scales automatically with video size)
+  wrap_chars: 36        # tagged paragraphs wrap after this many characters
+  color: white          # text color: name or 0xRRGGBB
+
+paths:
+  script: script.txt
+  clips_dir: clips      # drop your copyright-free .mp4/.mov/.webm files here
+  output_dir: output
