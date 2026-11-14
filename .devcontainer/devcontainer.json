@@ -1,0 +1,6 @@
+{
+  "name": "kokoro-video-pipeline",
+  "build": { "dockerfile": "Dockerfile", "context": ".." },
+  "postCreateCommand": "bash setup.sh",
+  "customizations": { "vscode": { "extensions": ["ms-python.python"] } }
+}

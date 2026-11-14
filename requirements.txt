@@ -1,4 +1,4 @@
 # torch (CPU build) is installed first by setup.sh so pip skips the CUDA wheels.
-kokoro>=0.9.4
+kokoro>=0.7.16
 soundfile>=0.12
 PyYAML>=6.0
