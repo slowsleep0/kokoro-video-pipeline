@@ -51,3 +51,16 @@ paths:
   script: script.txt
   clips_dir: clips      # drop your copyright-free .mp4/.mov/.webm files here
   output_dir: output
+
+# ---------------------------------------------------------------------------
+# AUDIO-REACTIVE WAVEFORM: a strip along the bottom edge that moves with the
+# actual narration audio (rendered by ffmpeg from narration.wav's samples -
+# it dips in pauses and jumps on words, exactly like music-video waveforms).
+#   mode: off    = disabled (default, zero extra render cost)
+#   mode: line   = smooth waveform line (music-video style)
+#   mode: bars   = frequency spectrum bars (podcast style)
+# ---------------------------------------------------------------------------
+wave:
+  mode: line
+  color: 0x4FC3F7       # any ffmpeg color: name or 0xRRGGBB
+  height: 180           # strip height in px at 1080p (scales with video size)
