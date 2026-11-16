@@ -397,8 +397,18 @@ def build_fx_chain(fx: list[dict], W: int, H: int, fps: int, txc: dict,
 # ------------------------------------------------------------------- render --
 def render(bg: Path, wav: Path, titles: list[dict], fx: list[dict], total: float,
            W: int, H: int, fps: int, vq: tuple[str, int], tc: dict, txc: dict,
-           burn_srt: Path | None, work: Path, out: Path) -> None:
-    af = "[1:a]loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[aout]"
+           burn_srt: Path | None, work: Path, out: Path,
+           wave: dict | None = None) -> None:
+    wave = wave or {}
+    wave_mode = str(wave.get("mode", "off")).lower()
+    wave_color = str(wave.get("color", "0x4FC3F7"))
+    wave_h = max(60, round(int(wave.get("height", 180)) * H / 1080))
+    wave_h = min(wave_h - wave_h % 2, H // 3)      # even px, max 1/3 of screen
+    if wave_mode != "off":
+        af = ("[1:a]asplit=2[al][aw];"             # tap narration twice:
+              "[al]loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[aout]")
+    else:
+        af = "[1:a]loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[aout]"
     vq_p, vq_c = vq
     extra: list[str] = []
     fc: list[str] = []
@@ -418,7 +428,27 @@ def render(bg: Path, wav: Path, titles: list[dict], fx: list[dict], total: float
         fc.append(f"[{cur}]subtitles={burn_srt}[sb]")
         cur = "sb"
 
-    if not fc:  # nothing drawn on the video -> stream-copy the background (fast)
+    if wave_mode != "off":  # audio-reactive strip along the bottom edge
+        if wave_mode == "bars":
+            wspec = (f"[aw]showfreqs=r={fps}:s={W}x{wave_h}:mode=bar"
+                     f":ascale=cbrt:colors={wave_color}[wv]")
+        else:
+            # draw at 1/8 width first: ~7 samples per column makes the
+            # min/max envelope actually fill; stretched back up it reads
+            # as a fat music-video waveform instead of a 1-px hairline.
+            # scale=sqrt boosts quiet parts of the curve (thicker line)
+            # while keeping word/pause contrast at ~4:1.
+            wspec = (f"[aw]showwaves=r={fps}:s={W // 8}x{wave_h}"
+                     f":mode=cline:scale=sqrt:colors={wave_color}"
+                     f",scale={W}:{wave_h}[wv]")
+        strip_y = H - wave_h - 8                   # dim backdrop so it reads
+        fc.append(f"[{cur}]drawbox=x=0:y={strip_y}:w=iw:h={wave_h + 8}"
+                  f":color=black@0.55:t=fill[wbs]")
+        fc.append(wspec)                           # audio -> video stream
+        fc.append(f"[wbs][wv]overlay=x=0:y={strip_y}[vwx]")
+        cur = "vwx"
+
+    if not fc and wave_mode == "off":  # nothing drawn -> stream-copy bg (fast)
         run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-stats",
              "-i", bg, "-i", wav, "-filter_complex", af,
              "-map", "0:v", "-map", "[aout]", "-c:v", "copy",
@@ -505,7 +535,8 @@ def main() -> None:
     t3 = time.time()
     out = ROOT / (args.out or out_dir / "final.mp4")
     burn = out_dir / "narration.srt" if v.get("burn_subtitles") else None
-    render(bg, wav, titles, fx, total, W, H, fps, vq, tc, txc, burn, work, out)
+    render(bg, wav, titles, fx, total, W, H, fps, vq, tc, txc, burn, work, out,
+           wave=cfg.get("wave"))
     t_render = time.time() - t3
 
     (out_dir / ".bg.mp4").unlink(missing_ok=True)
